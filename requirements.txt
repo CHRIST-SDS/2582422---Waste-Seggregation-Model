@@ -1,0 +1,9 @@
+torch>=2.0
+torchvision>=0.15
+pillow>=10.0
+numpy
+tqdm
+requests
+openai>=1.0
+python-dotenv
+gradio>=4.0
