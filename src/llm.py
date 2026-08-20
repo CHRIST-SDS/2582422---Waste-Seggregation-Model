@@ -3,7 +3,7 @@
 Uses Ollama running locally (default http://localhost:11434).
 The CV model answers "what is this?"; the LLM answers "what does it mean and
 what should the user do?" using a short prompt built from the structured
-prediction plus optional campus rules.
+prediction plus campus rules.
 """
 import os
 
@@ -13,24 +13,28 @@ from .config import LLM_MAX_TOKENS, LLM_MODEL
 from .recommend import BIN_RULES
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+LLM_TIMEOUT = int(os.environ.get("LLM_TIMEOUT", "30"))
 
-DEFAULT_SYSTEM_PROMPT = (
-    "You are a waste-sorting assistant for a campus smart waste-management system. "
-    "You receive a structured prediction from a computer-vision model plus campus rules. "
-    "Reply concisely in 2-3 short sentences. Always state the bin color and the exact "
-    "action the user must take. If the prediction is low-confidence, ask a short "
-    "clarifying question and tell the user how to verify the item."
+SYSTEM_PROMPT = (
+    "You are a campus waste-sorting assistant. "
+    "Given a CV prediction and bin rules below, reply in 2-3 short sentences. "
+    "Always state the bin color and the action the user must take. "
+    f"{BIN_RULES}"
 )
 
 
 def ollama_available() -> bool:
-    """Check if an Ollama server is reachable."""
+    """Check if an Ollama server is reachable and has the required model."""
     try:
-        client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
+        client = OpenAI(
+            base_url=OLLAMA_BASE_URL,
+            api_key="ollama",
+            timeout=5,
+        )
         models = client.models.list()
         available = [m.id for m in models.data]
         if LLM_MODEL not in available:
-            print(f"Warning: Model '{LLM_MODEL}' not found in Ollama. Available: {available}")
+            print(f"Warning: '{LLM_MODEL}' not found. Available: {available}")
             print(f"Run: ollama pull {LLM_MODEL}")
             return False
         return True
@@ -38,22 +42,17 @@ def ollama_available() -> bool:
         return False
 
 
-def build_user_prompt(prediction: dict, context: str = "") -> str:
+def build_user_prompt(prediction: dict) -> str:
     label = prediction.get("label", "unknown")
     confidence = prediction.get("confidence", 0.0)
     probas = prediction.get("probas", {})
-    top = ", ".join(f"{k}: {v * 100:.0f}%" for k, v in list(probas.items())[:3]) or "n/a"
-    ambiguity = "low confidence" if prediction.get("low_confidence") else "high confidence"
-
-    lines = [
-        f"The computer-vision model identified '{label}' with {ambiguity} "
-        f"(confidence {confidence * 100:.1f}%).",
-        f"Top probabilities: {top}.",
-    ]
-    if context:
-        lines.append(f"Campus rules: {context}")
-    lines.append("What bin should the user use and what must they do first?")
-    return "\n".join(lines)
+    top = ", ".join(f"{k}: {v*100:.0f}%" for k, v in list(probas.items())[:3]) or "n/a"
+    conf = "low" if prediction.get("low_confidence") else "high"
+    return (
+        f"Item identified as '{label}' ({conf} confidence, {confidence*100:.1f}%). "
+        f"Top matches: {top}. "
+        "What bin should the user use and what must they do first?"
+    )
 
 
 def generate_recommendation(
@@ -62,21 +61,23 @@ def generate_recommendation(
     model: str | None = None,
 ) -> str:
     """Call Ollama with the structured prediction. Returns the assistant message."""
-    client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
+    client = OpenAI(
+        base_url=OLLAMA_BASE_URL,
+        api_key="ollama",
+        timeout=LLM_TIMEOUT,
+    )
     try:
         response = client.chat.completions.create(
             model=model or LLM_MODEL,
             messages=[
-                {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
-                {"role": "system", "content": BIN_RULES},
-                {"role": "user", "content": build_user_prompt(prediction, context)},
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": build_user_prompt(prediction)},
             ],
             temperature=0.3,
-            max_tokens=LLM_MAX_TOKENS,
+            max_tokens=150,
         )
         return response.choices[0].message.content.strip()
     except Exception as exc:
         raise RuntimeError(
-            f"LLM call failed: {exc}. "
-            "Make sure Ollama is running and a model is pulled (ollama pull llama3.2:3b)."
+            f"LLM error: {exc}"
         ) from exc
