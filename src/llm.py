@@ -10,6 +10,7 @@ import os
 from openai import OpenAI
 
 from .config import LLM_MAX_TOKENS, LLM_MODEL
+from .recommend import BIN_RULES
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 
@@ -61,6 +62,7 @@ def generate_recommendation(
         model=model or LLM_MODEL,
         messages=[
             {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
+            {"role": "system", "content": BIN_RULES},
             {"role": "user", "content": build_user_prompt(prediction, context)},
         ],
         temperature=0.3,

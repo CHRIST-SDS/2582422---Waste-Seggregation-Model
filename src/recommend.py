@@ -30,8 +30,8 @@ BINS = {
         "Empty and rinse the plastic item, then place it in the BLUE recycling bin.",
     ),
     "metal": BinInfo(
-        "BLUE", "#2196F3", "Recyclable / Dry waste",
-        "Rinse cans and tins, then place them in the BLUE recycling bin.",
+        "RED", "#EF4444", "Non-recyclable / Special waste",
+        "Metal items should be placed in the RED bin for proper disposal.",
     ),
     "glass": BinInfo(
         "RED", "#EF4444", "Non-recyclable / Special waste",
@@ -43,6 +43,17 @@ BINS = {
         "Place this item in the RED residual-waste bin. Do not mix it with recyclables.",
     ),
 }
+
+BIN_RULES = (
+    "Waste bin rules for this campus:\n"
+    "- plastic -> Blue bin (Recyclable)\n"
+    "- paper -> Blue bin (Recyclable)\n"
+    "- metal -> Red bin (Non-recyclable)\n"
+    "- glass -> Red bin (Non-recyclable)\n"
+    "- organic / food waste -> Green bin (Biodegradable)\n"
+    "- cardboard -> Blue bin (Recyclable)\n"
+    "- trash -> Red bin (Non-recyclable)"
+)
 
 
 def bin_for_class(class_name: str) -> BinInfo | None:
