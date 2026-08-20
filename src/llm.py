@@ -1,14 +1,18 @@
-"""LLM layer: turns structured CV output into concise, human-friendly guidance (OpenAI).
+"""LLM layer: turns structured CV output into concise, human-friendly guidance.
 
-The CV model answers "what is this?"; the LLM answers "what does it mean and
-what should the user do?" using a short prompt built from the structured
-prediction plus optional campus rules.
+Supports two backends:
+  - Ollama (local, default) — runs Llama 3.2 3B via localhost:11434
+  - OpenAI — runs GPT-4o-mini via api.openai.com (requires OPENAI_API_KEY)
+
+If neither backend is available, callers should fall back to rule-based guidance.
 """
 import os
 
 from openai import OpenAI
 
 from .config import LLM_MAX_TOKENS, LLM_MODEL
+
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 
 DEFAULT_SYSTEM_PROMPT = (
     "You are a waste-sorting assistant for a campus smart waste-management system. "
@@ -19,14 +23,30 @@ DEFAULT_SYSTEM_PROMPT = (
 )
 
 
-def _api_key() -> str:
-    key = os.environ.get("OPENAI_API_KEY")
-    if not key:
-        raise RuntimeError(
-            "OPENAI_API_KEY is not set. Copy .env.example to .env and add your key, "
-            "then re-run (the app auto-loads .env)."
-        )
-    return key
+def _ollama_available() -> bool:
+    """Check if an Ollama server is reachable."""
+    try:
+        client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
+        client.models.list()
+        return True
+    except Exception:
+        return False
+
+
+def _openai_available() -> bool:
+    return bool(os.environ.get("OPENAI_API_KEY"))
+
+
+def _client():
+    """Pick the best available client: Ollama first, then OpenAI."""
+    if _ollama_available():
+        return OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama"), "ollama"
+    if _openai_available():
+        return OpenAI(), "openai"
+    raise RuntimeError(
+        "No LLM backend available. Install and start Ollama (ollama.com/download) "
+        "and pull a model (ollama pull llama3.2:3b), or set OPENAI_API_KEY in .env."
+    )
 
 
 def build_user_prompt(prediction: dict, context: str = "") -> str:
@@ -50,11 +70,16 @@ def build_user_prompt(prediction: dict, context: str = "") -> str:
 def generate_recommendation(
     prediction: dict,
     context: str = "",
-    api_key: str | None = None,
-    model: str = LLM_MODEL,
+    model: str | None = None,
 ) -> str:
-    """Call OpenAI with the structured prediction. Returns the assistant message."""
-    client = OpenAI(api_key=api_key or _api_key())
+    """Call the best available LLM with the structured prediction. Returns the assistant message."""
+    client, backend = _client()
+
+    if backend == "ollama":
+        model = model or LLM_MODEL
+    else:
+        model = model or LLM_MODEL
+
     response = client.chat.completions.create(
         model=model,
         messages=[

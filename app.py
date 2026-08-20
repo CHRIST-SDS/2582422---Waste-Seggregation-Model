@@ -20,7 +20,7 @@ import gradio as gr
 from dotenv import load_dotenv
 
 from src.config import CLASS_NAMES, MODELS_DIR
-from src.llm import generate_recommendation
+from src.llm import generate_recommendation, _ollama_available
 from src.predict import load_model, predict_image
 from src.recommend import recommendation_from_prediction
 
@@ -179,9 +179,14 @@ def main():
         )
 
     use_llm = not args.no_llm
-    if use_llm and not os.environ.get("OPENAI_API_KEY"):
-        print("Note: OPENAI_API_KEY not set — LLM layer disabled, using rule-based guidance.")
-        use_llm = False
+    if use_llm:
+        if _ollama_available():
+            print("Ollama detected — LLM layer enabled (local inference).")
+        elif os.environ.get("OPENAI_API_KEY"):
+            print("OpenAI API key found — LLM layer enabled.")
+        else:
+            print("No LLM backend found. Install Ollama (ollama.com/download) or set OPENAI_API_KEY.")
+            use_llm = False
 
     app = WasteApp(checkpoint, mock=args.mock, use_llm=use_llm)
 

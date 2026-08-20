@@ -191,15 +191,20 @@ Available architectures: `mobilenet_v3_small`, `resnet18`, `resnet50`, `efficien
 
 ---
 
-## Adding the LLM Layer
+## LLM Layer (Local, No API Key)
 
-1. Copy `.env.example` to `.env` and set your OpenAI API key:
-   ```
-   OPENAI_API_KEY=sk-your-key-here
-   ```
-2. Restart the app — the LLM layer activates automatically.
+The app uses **Ollama** to run Llama 3.2 3B locally for waste disposal guidance.
 
-Without a key the app uses **rule-based** guidance and works fully offline.
+1. Install Ollama from https://ollama.com/download
+2. Pull the model:
+   ```
+   ollama pull llama3.2:3b
+   ```
+3. Start the app — the LLM layer activates automatically when Ollama is running.
+
+The LLM only receives **text** (the CV model's structured prediction), never images.
+
+**Alternative:** You can also use OpenAI by setting `OPENAI_API_KEY` in `.env` — the app auto-detects which backend is available.
 
 ---
 
@@ -215,7 +220,7 @@ See `demo_video.mp4` in the repository root for a screen-recorded walkthrough of
 - PyTorch (CPU or CUDA)
 - torchvision
 - Gradio
-- OpenAI (optional, for LLM layer)
+- openai (Ollama uses OpenAI-compatible API)
 - python-dotenv
 - tqdm
 - Pillow
