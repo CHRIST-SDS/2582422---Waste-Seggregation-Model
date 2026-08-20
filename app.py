@@ -3,12 +3,12 @@
 Runs on localhost (default http://127.0.0.1:7860).
 
 Usage:
-    py app.py --checkpoint models/best_model.pth        # trained model + LLM (if key set)
+    py app.py --checkpoint models/best_model.pth        # trained model + LLM (if Ollama running)
     py app.py --checkpoint models/best_model.pth --no-llm
     py app.py --mock                                     # preview UI without a trained model
 
-The LLM layer is used automatically when OPENAI_API_KEY is set (.env is auto-loaded).
-Without a key, the app falls back to rule-based instructions so it still runs locally.
+The LLM layer is used automatically when Ollama is running with a model pulled.
+Without Ollama, the app falls back to rule-based instructions so it still works.
 """
 import argparse
 import html
@@ -20,7 +20,7 @@ import gradio as gr
 from dotenv import load_dotenv
 
 from src.config import CLASS_NAMES, MODELS_DIR
-from src.llm import generate_recommendation, _ollama_available
+from src.llm import generate_recommendation, ollama_available
 from src.predict import load_model, predict_image
 from src.recommend import recommendation_from_prediction
 
@@ -180,12 +180,10 @@ def main():
 
     use_llm = not args.no_llm
     if use_llm:
-        if _ollama_available():
+        if ollama_available():
             print("Ollama detected — LLM layer enabled (local inference).")
-        elif os.environ.get("OPENAI_API_KEY"):
-            print("OpenAI API key found — LLM layer enabled.")
         else:
-            print("No LLM backend found. Install Ollama (ollama.com/download) or set OPENAI_API_KEY.")
+            print("Ollama not running. Install it (ollama.com/download) and pull a model.")
             use_llm = False
 
     app = WasteApp(checkpoint, mock=args.mock, use_llm=use_llm)

@@ -11,7 +11,7 @@ Manual waste segregation is inconsistent, labour-intensive, and error-prone. Cam
 1. Captures or receives a photo of a waste item.
 2. Classifies it into one of **seven waste categories** using a deep-learning model.
 3. Maps the prediction to a colour-coded bin (Green / Blue / Red) with clear disposal instructions.
-4. (Optional) Passes the structured prediction to an **LLM** (OpenAI GPT-4o-mini) that generates a natural-language disposal guide.
+4. (Optional) Passes the structured prediction to a **local LLM** (Llama 3.2 via Ollama) that generates a natural-language disposal guide.
 
 The goal is to reduce contamination rates and make waste segregation effortless for any user.
 
@@ -22,7 +22,7 @@ The goal is to reduce contamination rates and make waste segregation effortless 
 ```
 ┌──────────────┐    ┌──────────────────────────┐    ┌─────────────────┐    ┌──────────────────┐
 │   Camera /   │───▶│  CV Classifier            │───▶│  Bin Mapper     │───▶│  LLM Guidance    │
-│   Upload     │    │  (MobileNetV3-Small)      │    │  (Rule-based)   │    │  (OpenAI API)    │
+│   Upload     │    │  (MobileNetV3-Small)      │    │  (Rule-based)   │    │  (Ollama / LLM)  │
 │   Image      │    │  7-class softmax          │    │  GREEN / BLUE / │    │  Natural-language│
 └──────────────┘    │  + confidence score       │    │  RED assignment │    │  disposal tips   │
                     └──────────────────────────┘    └─────────────────┘    └──────────────────┘
@@ -41,7 +41,7 @@ The goal is to reduce contamination rates and make waste segregation effortless 
 | 1. Input | `app.py` (Gradio) | User uploads or captures an image via webcam / file upload. |
 | 2. Classification | `src/predict.py` + `src/model.py` | Image is resized to 224x224, normalised, and passed through a fine-tuned MobileNetV3-Small. The 7-class softmax output provides a label and confidence score. |
 | 3. Bin mapping | `src/recommend.py` | The predicted class is mapped to a colour-coded bin (GREEN, BLUE, or RED) with specific disposal instructions. |
-| 4. LLM layer | `src/llm.py` | When `OPENAI_API_KEY` is set, the structured CV output is sent to GPT-4o-mini as a structured prompt; the LLM returns a concise, user-friendly disposal guide. |
+| 4. LLM layer | `src/llm.py` | When Ollama is running, the structured CV output is sent to Llama 3.2 3B; the LLM returns a concise, user-friendly disposal guide. |
 | 5. Display | `app.py` | Results are rendered as a colour-coded card with confidence bar, detected class, bin colour, and instructions. |
 
 ---
@@ -113,7 +113,7 @@ Two public datasets were combined:
 ├── app.py                  Gradio web demo (localhost)
 ├── requirements.txt        Python dependencies
 ├── run_demo.bat            One-click launcher (Windows)
-├── .env.example            OpenAI API key template
+├── .env.example            Environment config template
 │
 ├── src/
 │   ├── config.py           Paths, class names, hyperparameters
@@ -122,7 +122,7 @@ Two public datasets were combined:
 │   ├── train.py            Training entry point (CLI)
 │   ├── predict.py          Checkpoint loading + image inference
 │   ├── recommend.py        Class → bin colour / stream / instructions
-│   └── llm.py              OpenAI integration (optional)
+│   └── llm.py              Ollama LLM integration (local)
 │
 ├── scripts/
 │   ├── download_trashnet.py    Downloads TrashNet dataset (~43 MB)
@@ -203,8 +203,6 @@ The app uses **Ollama** to run Llama 3.2 3B locally for waste disposal guidance.
 3. Start the app — the LLM layer activates automatically when Ollama is running.
 
 The LLM only receives **text** (the CV model's structured prediction), never images.
-
-**Alternative:** You can also use OpenAI by setting `OPENAI_API_KEY` in `.env` — the app auto-detects which backend is available.
 
 ---
 

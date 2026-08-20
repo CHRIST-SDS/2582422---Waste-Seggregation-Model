@@ -1,10 +1,9 @@
 """LLM layer: turns structured CV output into concise, human-friendly guidance.
 
-Supports two backends:
-  - Ollama (local, default) — runs Llama 3.2 3B via localhost:11434
-  - OpenAI — runs GPT-4o-mini via api.openai.com (requires OPENAI_API_KEY)
-
-If neither backend is available, callers should fall back to rule-based guidance.
+Uses Ollama running locally (default http://localhost:11434).
+The CV model answers "what is this?"; the LLM answers "what does it mean and
+what should the user do?" using a short prompt built from the structured
+prediction plus optional campus rules.
 """
 import os
 
@@ -23,7 +22,7 @@ DEFAULT_SYSTEM_PROMPT = (
 )
 
 
-def _ollama_available() -> bool:
+def ollama_available() -> bool:
     """Check if an Ollama server is reachable."""
     try:
         client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
@@ -31,22 +30,6 @@ def _ollama_available() -> bool:
         return True
     except Exception:
         return False
-
-
-def _openai_available() -> bool:
-    return bool(os.environ.get("OPENAI_API_KEY"))
-
-
-def _client():
-    """Pick the best available client: Ollama first, then OpenAI."""
-    if _ollama_available():
-        return OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama"), "ollama"
-    if _openai_available():
-        return OpenAI(), "openai"
-    raise RuntimeError(
-        "No LLM backend available. Install and start Ollama (ollama.com/download) "
-        "and pull a model (ollama pull llama3.2:3b), or set OPENAI_API_KEY in .env."
-    )
 
 
 def build_user_prompt(prediction: dict, context: str = "") -> str:
@@ -72,16 +55,10 @@ def generate_recommendation(
     context: str = "",
     model: str | None = None,
 ) -> str:
-    """Call the best available LLM with the structured prediction. Returns the assistant message."""
-    client, backend = _client()
-
-    if backend == "ollama":
-        model = model or LLM_MODEL
-    else:
-        model = model or LLM_MODEL
-
+    """Call Ollama with the structured prediction. Returns the assistant message."""
+    client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
     response = client.chat.completions.create(
-        model=model,
+        model=model or LLM_MODEL,
         messages=[
             {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
             {"role": "user", "content": build_user_prompt(prediction, context)},

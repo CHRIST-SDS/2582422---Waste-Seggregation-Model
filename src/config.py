@@ -24,5 +24,5 @@ DEFAULT_LR = 1e-3
 LOW_CONFIDENCE_THRESHOLD = 0.65
 
 # LLM
-LLM_MODEL = "llama3.2:3b"  # Ollama local model (default). Override with OPENAI_MODEL env var.
+LLM_MODEL = "llama3.2:3b"  # Default Ollama model
 LLM_MAX_TOKENS = 200
