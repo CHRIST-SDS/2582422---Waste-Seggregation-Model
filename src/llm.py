@@ -27,7 +27,12 @@ def ollama_available() -> bool:
     """Check if an Ollama server is reachable."""
     try:
         client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
-        client.models.list()
+        models = client.models.list()
+        available = [m.id for m in models.data]
+        if LLM_MODEL not in available:
+            print(f"Warning: Model '{LLM_MODEL}' not found in Ollama. Available: {available}")
+            print(f"Run: ollama pull {LLM_MODEL}")
+            return False
         return True
     except Exception:
         return False
@@ -58,14 +63,20 @@ def generate_recommendation(
 ) -> str:
     """Call Ollama with the structured prediction. Returns the assistant message."""
     client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
-    response = client.chat.completions.create(
-        model=model or LLM_MODEL,
-        messages=[
-            {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
-            {"role": "system", "content": BIN_RULES},
-            {"role": "user", "content": build_user_prompt(prediction, context)},
-        ],
-        temperature=0.3,
-        max_tokens=LLM_MAX_TOKENS,
-    )
-    return response.choices[0].message.content.strip()
+    try:
+        response = client.chat.completions.create(
+            model=model or LLM_MODEL,
+            messages=[
+                {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
+                {"role": "system", "content": BIN_RULES},
+                {"role": "user", "content": build_user_prompt(prediction, context)},
+            ],
+            temperature=0.3,
+            max_tokens=LLM_MAX_TOKENS,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as exc:
+        raise RuntimeError(
+            f"LLM call failed: {exc}. "
+            "Make sure Ollama is running and a model is pulled (ollama pull llama3.2:3b)."
+        ) from exc
