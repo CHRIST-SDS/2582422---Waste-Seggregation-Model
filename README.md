@@ -54,7 +54,7 @@ The goal is to reduce contamination rates and make waste segregation effortless 
 | **cardboard** | BLUE | ![#2196F3](https://via.placeholder.com/12/2196F3/2196F3.png) #2196F3 | Recyclable / Dry waste |
 | **paper** | BLUE | ![#2196F3](https://via.placeholder.com/12/2196F3/2196F3.png) #2196F3 | Recyclable / Dry waste |
 | **plastic** | BLUE | ![#2196F3](https://via.placeholder.com/12/2196F3/2196F3.png) #2196F3 | Recyclable / Dry waste |
-| **metal** | BLUE | ![#2196F3](https://via.placeholder.com/12/2196F3/2196F3.png) #2196F3 | Recyclable / Dry waste |
+| **metal** | RED | ![#EF4444](https://via.placeholder.com/12/EF4444/EF4444.png) #EF4444 | Non-recyclable / Special waste |
 | **glass** | RED | ![#EF4444](https://via.placeholder.com/12/EF4444/EF4444.png) #EF4444 | Non-recyclable / Special waste |
 | **trash** | RED | ![#EF4444](https://via.placeholder.com/12/EF4444/EF4444.png) #EF4444 | Non-recyclable / Residual |
 
@@ -203,12 +203,6 @@ The app uses **Ollama** to run Llama 3.2 3B locally for waste disposal guidance.
 3. Start the app — the LLM layer activates automatically when Ollama is running.
 
 The LLM only receives **text** (the CV model's structured prediction), never images.
-
----
-
-## Demo Video
-
-See `demo_video.mp4` in the repository root for a screen-recorded walkthrough of the model classifying sample waste items across all 7 categories.
 
 ---
 
