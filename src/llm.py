@@ -7,12 +7,12 @@ prediction plus campus rules.
 """
 import os
 
-from openai import OpenAI
+import requests
 
 from .config import LLM_MAX_TOKENS, LLM_MODEL
 from .recommend import BIN_RULES
 
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 LLM_TIMEOUT = int(os.environ.get("LLM_TIMEOUT", "30"))
 
 SYSTEM_PROMPT = (
@@ -26,18 +26,13 @@ SYSTEM_PROMPT = (
 def ollama_available() -> bool:
     """Check if an Ollama server is reachable and has the required model."""
     try:
-        client = OpenAI(
-            base_url=OLLAMA_BASE_URL,
-            api_key="ollama",
-            timeout=5,
-        )
-        models = client.models.list()
-        available = [m.id for m in models.data]
-        if LLM_MODEL not in available:
-            print(f"Warning: '{LLM_MODEL}' not found. Available: {available}")
+        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
+        models = [m["name"] for m in resp.json().get("models", [])]
+        match = any(LLM_MODEL in m for m in models)
+        if not match:
+            print(f"Warning: '{LLM_MODEL}' not found. Available: {models}")
             print(f"Run: ollama pull {LLM_MODEL}")
-            return False
-        return True
+        return match
     except Exception:
         return False
 
@@ -61,23 +56,21 @@ def generate_recommendation(
     model: str | None = None,
 ) -> str:
     """Call Ollama with the structured prediction. Returns the assistant message."""
-    client = OpenAI(
-        base_url=OLLAMA_BASE_URL,
-        api_key="ollama",
-        timeout=LLM_TIMEOUT,
-    )
-    try:
-        response = client.chat.completions.create(
-            model=model or LLM_MODEL,
-            messages=[
+    resp = requests.post(
+        f"{OLLAMA_BASE_URL}/api/chat",
+        json={
+            "model": model or LLM_MODEL,
+            "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": build_user_prompt(prediction)},
             ],
-            temperature=0.3,
-            max_tokens=150,
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as exc:
-        raise RuntimeError(
-            f"LLM error: {exc}"
-        ) from exc
+            "stream": False,
+            "options": {
+                "temperature": 0.3,
+                "num_predict": 150,
+            },
+        },
+        timeout=LLM_TIMEOUT,
+    )
+    resp.raise_for_status()
+    return resp.json()["message"]["content"].strip()

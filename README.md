@@ -218,7 +218,7 @@ See `demo_video.mp4` in the repository root for a screen-recorded walkthrough of
 - PyTorch (CPU or CUDA)
 - torchvision
 - Gradio
-- openai (Ollama uses OpenAI-compatible API)
+- requests
 - python-dotenv
 - tqdm
 - Pillow
