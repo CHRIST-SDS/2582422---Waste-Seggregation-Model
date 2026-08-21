@@ -219,6 +219,4 @@ The LLM only receives **text** (the CV model's structured prediction), never ima
 
 ---
 
-## License
 
-This project was developed as part of coursework (CIA 2 — 2582422). For academic use only.
